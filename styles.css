@@ -1,0 +1,65 @@
+/* Base styles */
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Form styles */
+input:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: -1px;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type=number] {
+    -moz-appearance: textfield;
+}
+
+/* Card hover effects */
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+/* Button styles */
+button {
+    transition: all 0.2s ease-in-out;
+}
+
+button:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .max-w-4xl {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .no-print {
+        display: none;
+    }
+
+    body {
+        background: white;
+    }
+
+    .card {
+        border: 1px solid #e5e7eb;
+        box-shadow: none;
+    }
+}
