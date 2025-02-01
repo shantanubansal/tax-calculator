@@ -4,59 +4,233 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indian Income Tax Calculator 2024-25</title>
-    <meta name="description" content="Calculate your income tax under both new and old tax regimes for FY 2024-25 and 2025-26">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- React and ReactDOM -->
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
 
     <!-- Custom styles -->
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+        }
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+        input:focus {
+            outline: 2px solid #3b82f6;
+            outline-offset: -1px;
+        }
 
-    <!-- SEO tags -->
-    <meta property="og:title" content="Indian Income Tax Calculator 2024-25">
-    <meta property="og:description" content="Calculate your income tax under both new and old tax regimes">
-    <meta property="og:type" content="website">
-    <meta name="twitter:card" content="summary_large_image">
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
 </head>
 <body class="bg-gray-50">
-<nav class="bg-white shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-            <div class="flex">
-                <div class="flex-shrink-0 flex items-center">
-                    <h1 class="text-xl font-bold text-gray-900">Income Tax Calculator</h1>
+<div id="root"></div>
+
+<script type="text/babel">
+    const TaxCalculator = () => {
+        const [income, setIncome] = React.useState('');
+        const [age, setAge] = React.useState('30');
+        const [calculatedTaxes, setCalculatedTaxes] = React.useState(null);
+
+        const formatCurrency = (amount) => {
+            return new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                maximumFractionDigits: 0,
+            }).format(amount);
+        };
+
+        const getTaxSlabs = (regime, age) => {
+            switch (regime) {
+                case 'new2025':
+                    return [
+                        { min: 0, max: 400000, rate: 0 },
+                        { min: 400000, max: 800000, rate: 0.05 },
+                        { min: 800000, max: 1200000, rate: 0.10 },
+                        { min: 1200000, max: 1600000, rate: 0.15 },
+                        { min: 1600000, max: 2000000, rate: 0.20 },
+                        { min: 2000000, max: 2400000, rate: 0.25 },
+                        { min: 2400000, max: Infinity, rate: 0.30 }
+                    ];
+                case 'new2024':
+                    return [
+                        { min: 0, max: 300000, rate: 0 },
+                        { min: 300000, max: 700000, rate: 0.05 },
+                        { min: 700000, max: 1000000, rate: 0.10 },
+                        { min: 1000000, max: 1200000, rate: 0.15 },
+                        { min: 1200000, max: 1500000, rate: 0.20 },
+                        { min: 1500000, max: Infinity, rate: 0.30 }
+                    ];
+                case 'old':
+                    if (age >= 80) {
+                        return [
+                            { min: 0, max: 500000, rate: 0 },
+                            { min: 500000, max: 1000000, rate: 0.20 },
+                            { min: 1000000, max: Infinity, rate: 0.30 }
+                        ];
+                    } else if (age >= 60) {
+                        return [
+                            { min: 0, max: 300000, rate: 0 },
+                            { min: 300000, max: 500000, rate: 0.05 },
+                            { min: 500000, max: 1000000, rate: 0.20 },
+                            { min: 1000000, max: Infinity, rate: 0.30 }
+                        ];
+                    } else {
+                        return [
+                            { min: 0, max: 250000, rate: 0 },
+                            { min: 250000, max: 500000, rate: 0.05 },
+                            { min: 500000, max: 1000000, rate: 0.20 },
+                            { min: 1000000, max: Infinity, rate: 0.30 }
+                        ];
+                    }
+            }
+        };
+
+        const calculateTax = (income, regime) => {
+            let tax = 0;
+            const slabs = getTaxSlabs(regime, parseInt(age));
+
+            for (const slab of slabs) {
+                if (income > slab.min) {
+                    const taxableAmount = Math.min(income - slab.min, slab.max - slab.min);
+                    tax += taxableAmount * slab.rate;
+                }
+            }
+
+            // Apply rebate under section 87A
+            if ((regime === 'new2025' && income <= 1200000) ||
+                (regime === 'new2024' && income <= 700000) ||
+                (regime !== 'new2025' && regime !== 'new2024' && income <= 500000)) {
+                tax = 0;
+            }
+
+            // Calculate surcharge
+            let surcharge = 0;
+            if (income > 50000000) surcharge = tax * 0.37;
+            else if (income > 20000000) surcharge = tax * 0.25;
+            else if (income > 10000000) surcharge = tax * 0.15;
+            else if (income > 5000000) surcharge = tax * 0.10;
+
+            // Calculate cess
+            const cess = (tax + surcharge) * 0.04;
+
+            return {
+                baseTax: tax,
+                surcharge,
+                cess,
+                total: tax + surcharge + cess
+            };
+        };
+
+        const handleSubmit = (e) => {
+            e.preventDefault();
+            const numericIncome = parseFloat(income.replace(/,/g, ''));
+
+            if (isNaN(numericIncome) || numericIncome < 0) {
+                alert('Please enter a valid income amount');
+                return;
+            }
+
+            const taxes = {
+                'New Tax Regime 2025-26': calculateTax(numericIncome, 'new2025'),
+                'New Tax Regime 2024-25': calculateTax(numericIncome, 'new2024'),
+                'Old Tax Regime': calculateTax(numericIncome, 'old')
+            };
+
+            setCalculatedTaxes(taxes);
+        };
+
+        return (
+            <div className="max-w-4xl mx-auto p-4">
+                <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                    <h1 className="text-2xl font-bold mb-6">Indian Income Tax Calculator 2024-25</h1>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Annual Income</label>
+                            <input
+                                type="text"
+                                value={income}
+                                onChange={(e) => setIncome(e.target.value)}
+                                className="w-full rounded-md border border-gray-300 p-2"
+                                placeholder="Enter your annual income"
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Age</label>
+                            <input
+                                type="number"
+                                value={age}
+                                onChange={(e) => setAge(e.target.value)}
+                                className="w-full rounded-md border border-gray-300 p-2"
+                                min="0"
+                                max="120"
+                                required
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                            Calculate Tax
+                        </button>
+                    </form>
                 </div>
+
+                {calculatedTaxes && (
+                    <div className="space-y-4">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-blue-800">
+                            Based on your income of {formatCurrency(parseFloat(income.replace(/,/g, '')))} and age {age}
+                        </div>
+
+                        {Object.entries(calculatedTaxes).map(([regime, tax]) => (
+                            <div key={regime} className="bg-white rounded-lg shadow-sm p-6">
+                                <h2 className="text-lg font-semibold mb-4">{regime}</h2>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                        <span>Base Tax:</span>
+                                        <span>{formatCurrency(tax.baseTax)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Surcharge:</span>
+                                        <span>{formatCurrency(tax.surcharge)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Health & Education Cess:</span>
+                                        <span>{formatCurrency(tax.cess)}</span>
+                                    </div>
+                                    <div className="flex justify-between font-bold pt-2 border-t">
+                                        <span>Total Tax Liability:</span>
+                                        <span>{formatCurrency(tax.total)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                <footer className="mt-8 text-center text-sm text-gray-500">
+                    This calculator is for informational purposes only. Please consult with a tax professional for advice.
+                </footer>
             </div>
-        </div>
-    </div>
-</nav>
+        );
+    };
 
-<main class="py-10">
-    <div id="root"></div>
-</main>
-
-<footer class="bg-white border-t">
-    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <p class="text-center text-gray-500 text-sm">
-            This calculator is for informational purposes only. Please consult with a tax professional for advice.
-        </p>
-    </div>
-</footer>
-
-<!-- React and ReactDOM -->
-<script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
-<script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
-
-<!-- Application code -->
-<script src="app.tsx"></script>
+    ReactDOM.render(<TaxCalculator />, document.getElementById('root'));
+</script>
 </body>
 </html>
