@@ -13,7 +13,6 @@
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
 
-    <!-- Custom styles -->
     <style>
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -43,6 +42,7 @@
         const [income, setIncome] = React.useState('');
         const [age, setAge] = React.useState('30');
         const [calculatedTaxes, setCalculatedTaxes] = React.useState(null);
+        const [debug, setDebug] = React.useState('');
 
         const formatCurrency = (amount) => {
             return new Intl.NumberFormat('en-IN', {
@@ -74,13 +74,13 @@
                         { min: 1500000, max: Infinity, rate: 0.30 }
                     ];
                 case 'old':
-                    if (age >= 80) {
+                    if (parseInt(age) >= 80) {
                         return [
                             { min: 0, max: 500000, rate: 0 },
                             { min: 500000, max: 1000000, rate: 0.20 },
                             { min: 1000000, max: Infinity, rate: 0.30 }
                         ];
-                    } else if (age >= 60) {
+                    } else if (parseInt(age) >= 60) {
                         return [
                             { min: 0, max: 300000, rate: 0 },
                             { min: 300000, max: 500000, rate: 0.05 },
@@ -99,20 +99,26 @@
         };
 
         const calculateTax = (income, regime) => {
+            let debugText = `Calculating tax for ${regime} with income ${income}\n`;
             let tax = 0;
             const slabs = getTaxSlabs(regime, parseInt(age));
 
             for (const slab of slabs) {
                 if (income > slab.min) {
                     const taxableAmount = Math.min(income - slab.min, slab.max - slab.min);
-                    tax += taxableAmount * slab.rate;
+                    const slabTax = taxableAmount * slab.rate;
+                    tax += slabTax;
+                    debugText += `Slab ${slab.min}-${slab.max}: Rate ${slab.rate * 100}%, Amount ${taxableAmount}, Tax ${slabTax}\n`;
                 }
             }
 
-            // Apply rebate under section 87A
+            debugText += `Base tax before rebate: ${tax}\n`;
+
+            // Apply rebate under section 87A (before surcharge and cess)
             if ((regime === 'new2025' && income <= 1200000) ||
                 (regime === 'new2024' && income <= 700000) ||
-                (regime !== 'new2025' && regime !== 'new2024' && income <= 500000)) {
+                (regime === 'old' && income <= 500000)) {
+                debugText += `Applying rebate as income ${income} is within limit\n`;
                 tax = 0;
             }
 
@@ -126,6 +132,9 @@
             // Calculate cess
             const cess = (tax + surcharge) * 0.04;
 
+            debugText += `Final: Base Tax ${tax}, Surcharge ${surcharge}, Cess ${cess}\n`;
+            setDebug(prev => prev + debugText + '\n');
+
             return {
                 baseTax: tax,
                 surcharge,
@@ -136,6 +145,8 @@
 
         const handleSubmit = (e) => {
             e.preventDefault();
+            setDebug(''); // Clear previous debug info
+
             const numericIncome = parseFloat(income.replace(/,/g, ''));
 
             if (isNaN(numericIncome) || numericIncome < 0) {
@@ -220,11 +231,22 @@
                                 </div>
                             </div>
                         ))}
+
+                        {debug && (
+                            <div className="mt-4 p-4 bg-gray-100 rounded-lg text-xs font-mono whitespace-pre overflow-x-auto">
+                                {debug}
+                            </div>
+                        )}
                     </div>
                 )}
 
                 <footer className="mt-8 text-center text-sm text-gray-500">
-                    This calculator is for informational purposes only. Please consult with a tax professional for advice.
+                    <p>This calculator is for informational purposes only. Please consult with a tax professional for advice.</p>
+                    <div className="mt-2 text-xs">
+                        <div><strong>New Regime 2025-26:</strong> No tax up to ₹12 lakhs</div>
+                        <div><strong>New Regime 2024-25:</strong> No tax up to ₹7 lakhs</div>
+                        <div><strong>Old Regime:</strong> No tax up to ₹5 lakhs</div>
+                    </div>
                 </footer>
             </div>
         );
